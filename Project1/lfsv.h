@@ -12,29 +12,28 @@ struct Pair {
 // for some compilers alignment needed to stop std::atomic<Pair>::load to segfault
 
 class MemoryBank {
-    std::deque< std::vector<int>* > slots;
+    std::deque< std::vector<int>*> slots;
     std::mutex m;
 public:
-    MemoryBank() : slots(6000) {
-        for (int i = 0; i < 6000; ++i) {
-            slots[i] = reinterpret_cast<std::vector<int>*>(new char[sizeof(std::vector<int>)]);
+    MemoryBank() : slots(3000){//6000->3000
+        for (int i = 0; i < 3000; ++i) {
+            slots[i] = reinterpret_cast<std::vector<int>*>(new char[sizeof(std::vector<int>)] {});
         }
     }
     std::vector<int>* Get() {
         std::lock_guard<std::mutex> lock(m);
         std::vector<int>* p = slots[0];
         slots.pop_front();
+        p->~vector();//ADDED
         return p;
     }
     void Store(std::vector<int>* p) {
         std::lock_guard<std::mutex> lock(m);
-        //clean up the memory-------
-        //std::vector<int>().swap(*p);
-        //p->~vector();
         slots.push_back(p);
     }
     ~MemoryBank() {
         for (auto& el : slots) { 
+            el->~vector();//ADDED
             delete[] reinterpret_cast<char*>(el); 
         }
     }
@@ -51,7 +50,6 @@ public:
 	}
 
     ~LFSV() { 
-        pdata.load().pointer->~vector();
         mb.Store(pdata.load().pointer);
     }
 
@@ -61,21 +59,12 @@ public:
         do {
 
             if (pdata_new.pointer) {
-                pdata_new.pointer->~vector();   
-                pdata_new.ref_count = -1;//ADDED
                 mb.Store(pdata_new.pointer);
             }
 
             pdata_old.pointer = pdata.load().pointer;
             pdata_old.ref_count = 1;
-            auto g = mb.Get();
-            auto p = pdata_old.pointer;//already deleted by another thread
-            if (pdata.load().ref_count == -1) {
-                int i{};
-            }
-            auto val = *p;              //trying to access deleted memory
-            pdata_new.pointer = new (g) std::vector<int>(val);
-            //pdata_new.pointer = new (mb.Get()) std::vector<int>(*pdata_old.pointer);
+            pdata_new.pointer = new (mb.Get()) std::vector<int>(*pdata_old.pointer);
             pdata_new.ref_count = 1;
 
             // working on a local copy
@@ -93,8 +82,6 @@ public:
 
         } while ( !(this->pdata).compare_exchange_weak( pdata_old, pdata_new  ));        
 
-        pdata_old.pointer->~vector();
-        pdata_old.ref_count = -1;//ADDED
         mb.Store(pdata_old.pointer);
     }
 

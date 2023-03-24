@@ -18,6 +18,7 @@ LFSV lfsv;
 
 #include <algorithm>//copy, random_shuffle
 #include <ctime>    //std::time (NULL) to seed srand
+#include <chrono>
 
 void insert_range( int b, int e ) {
     int * range = new int [e-b];
@@ -73,13 +74,22 @@ void test0() { test( 1, 10 ); }
 void test1() { test( 2, 10 ); }
 void test2() { test( 8, 100 ); }
 void customTest() { 
-    test(64, 250);
+    auto startSingle = std::chrono::high_resolution_clock::now();
+    test(64, 300);//<---time:10.722 seconds, 11.0908 seconds
+                    //release: 5.41367 seconds, 5.59725 seconds
+    auto endSingle = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<double> elapsedSingle = endSingle - startSingle;
+
+    std::cout << "took " << elapsedSingle.count() << " seconds" << std::endl;
+
+    //test(128, 300);//<---time:
     //test(8, 15); 
 }
 void test3() { test( 16, 100 ); } 
 
 void (*pTests[])() = { 
-    test0,test1,test2,test3
+    test0,test1,test2,test3,customTest
 }; 
 
 
@@ -96,6 +106,8 @@ int main( int argc, char ** argv ) {
  //       return 0;
 	//}
     //test3();
+    //test3();
+    //test0();
     customTest();
     //_CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG);
     //_CrtDumpMemoryLeaks();
