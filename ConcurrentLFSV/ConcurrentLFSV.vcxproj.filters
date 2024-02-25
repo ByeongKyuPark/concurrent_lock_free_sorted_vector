@@ -20,9 +20,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="lfsv_old.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="lfsv.h">
       <Filter>Header Files</Filter>
     </ClInclude>
