@@ -19,7 +19,7 @@ To compile the test program using the provided Makefile, follow these steps:
 1. Navigate to the directory containing the source files and the Makefile. If you're using a terminal, you can use the `cd` command to change the directory. For example, if your project is located in the 'ConcurrentLFSV' folder, you can navigate to it with:
 
     ```bash
-    cd path/to/ConcurrentLFSV
+    cd ConcurrentLFSV
     ```
 
 2. Once you're in the correct directory, you can compile the program by simply running the `make` command. This will use the Makefile to compile your program according to the predefined rules and settings:
