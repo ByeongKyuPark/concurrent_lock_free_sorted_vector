@@ -1,30 +1,36 @@
 #include "LockFreeMemoryBank.h"
-
 LockFreeMemoryBank::~LockFreeMemoryBank() {
-    while (Node* oldHead = mHead.load()) {
-        mHead.store(oldHead->m_pNext);
-        delete oldHead->m_pData;
-        delete oldHead;
-        oldHead = nullptr;
+    AtomicNode oldHead = mHead.load();
+    while (oldHead.ptr) {
+        mHead.store(AtomicNode(oldHead.ptr->m_pNext, oldHead.version + 1));
+        delete oldHead.ptr->m_pData;
+        delete oldHead.ptr;
+        oldHead = mHead.load();
     }
 }
 
 void LockFreeMemoryBank::Store(std::vector<int>* vec) {
     Node* newNode = new Node(vec);
-    newNode->m_pNext = mHead.load(std::memory_order_relaxed);
-    while (!mHead.compare_exchange_weak(newNode->m_pNext, newNode,
+    AtomicNode oldHead = mHead.load(std::memory_order_relaxed);
+
+    do {
+        newNode->m_pNext = oldHead.ptr;
+        // Attempt to store the new node with an incremented version number.
+    } while (!mHead.compare_exchange_weak(oldHead, AtomicNode(newNode, oldHead.version + 1),
         std::memory_order_release,
         std::memory_order_relaxed));
 }
 
 std::vector<int>* LockFreeMemoryBank::Get() {
-    Node* oldHead = mHead.load(std::memory_order_relaxed);
-    while (oldHead && !mHead.compare_exchange_weak(oldHead, oldHead->m_pNext,
+    AtomicNode oldHead = mHead.load(std::memory_order_relaxed);
+
+    while (oldHead.ptr && !mHead.compare_exchange_weak(oldHead, AtomicNode(oldHead.ptr->m_pNext, oldHead.version + 1),
         std::memory_order_release,
         std::memory_order_relaxed));
-    if (oldHead) {
-        std::vector<int>* res = oldHead->m_pData;
-        delete oldHead;
+
+    if (oldHead.ptr) {
+        std::vector<int>* res = oldHead.ptr->m_pData;
+        delete oldHead.ptr;
         return res;
     }
     else {

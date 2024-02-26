@@ -31,7 +31,6 @@
  *   Further consideration may be required for memory reclamation strategies
  *   in long-running applications to avoid potential memory leaks.
  */
-
 #include <atomic>
 #include <vector>
 
@@ -44,10 +43,17 @@ private:
         Node(std::vector<int>* data) : m_pData(data), m_pNext(nullptr) {}
     };
 
-    std::atomic<Node*> mHead;
+    struct AtomicNode {
+        Node* ptr;
+        unsigned long long version;
+
+        AtomicNode(Node* pNode = nullptr, unsigned long long ver = 0) : ptr(pNode), version(ver) {}
+    };
+
+    std::atomic<AtomicNode> mHead;
 
 public:
-    LockFreeMemoryBank() : mHead(nullptr) {}
+    LockFreeMemoryBank() : mHead(AtomicNode()) {}
     ~LockFreeMemoryBank();
 
     void Store(std::vector<int>* vec);
