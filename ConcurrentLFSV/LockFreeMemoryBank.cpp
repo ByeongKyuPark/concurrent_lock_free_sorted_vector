@@ -15,7 +15,7 @@ void LockFreeMemoryBank::Store(std::vector<int>* vec) {
 
     do {
         newNode->m_pNext = oldHead.ptr;
-        // Attempt to store the new node with an incremented version number.
+        // attempt to store the new node with an incremented version number.
     } while (!mHead.compare_exchange_weak(oldHead, AtomicNode(newNode, oldHead.version + 1),
         std::memory_order_release,
         std::memory_order_relaxed));
