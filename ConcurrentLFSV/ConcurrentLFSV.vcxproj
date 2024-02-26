@@ -139,9 +139,11 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="lfsv.cpp" />
+    <ClCompile Include="LockFreeGarbageRemover.cpp" />
     <ClCompile Include="LockFreeMemoryBank.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="LockFreeGarbageRemover.h" />
     <ClInclude Include="LockFreeMemoryBank.h" />
     <ClInclude Include="lfsv.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>

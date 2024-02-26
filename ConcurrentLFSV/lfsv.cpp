@@ -1,24 +1,28 @@
 #include "lfsv.h"
 
-void GarbageRemover::WatchingThread() { // background thread function that deletes vectors after a delay
-    while (!mStop) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(20));
-        auto now = std::chrono::system_clock::now();
-        std::lock_guard<std::mutex> lock(mMutex); // delete vectors that are old enough
-        while (!mToBeDeleted.empty() && now - mToBeDeleted.front().second > std::chrono::milliseconds(40)) {
-            delete mToBeDeleted.front().first; // delete the vector
-            mToBeDeleted.pop_front(); // remove it from the queue
+LFSV::~LFSV() { // ensures the last data vector is also safely deleted
+    auto* lastData = pdata.load();
+    if (lastData) gr.Add(lastData);
+    gr.Stop(); // make sure to stop the GarbageRemover
+}
+
+void LFSV::Insert(int const& v) { // inserts a value into the vector in a thread-safe manner
+    std::vector<int>* pdata_old = nullptr, * pdata_new = nullptr;
+    do {
+        pdata_old = pdata.load(); // load the current vector
+        pdata_new = mb.Get(); // get a pre-allocated vector from the MemoryBank
+        *pdata_new = *pdata_old; // copy current data
+        pdata_new->push_back(v); // insert the new value
+        if (pdata.compare_exchange_weak(pdata_old, pdata_new)) {
+            gr.Add(pdata_old); // old data goes to GarbageRemover
         }
-    }
-    for (auto& pt : mToBeDeleted) delete pt.first; // clean up any remaining vectors
+        else {
+            mb.Store(pdata_new); // if CAS fails, return the vector to the MemoryBank
+        }
+    } while (pdata_new != pdata.load()); // loop until successful
 }
 
-GarbageRemover::~GarbageRemover() {
-    mStop = true;
-    if (mWorker.joinable()) mWorker.join(); // wait for the thread to finish
-}
-
-void GarbageRemover::Stop() { // stops the background thread
-    mStop = true;
-    mWorker.join(); // ensure the thread finishes cleanly
+int LFSV::operator[](int pos) { // accesses an element of the vector, potentially unsafe in concurrent scenarios
+    std::vector<int>* snapshot = pdata.load(); // get the current vector
+    return (*snapshot)[pos]; // return the requested element
 }
