@@ -4,90 +4,44 @@
     2. GarbageRemover: Delays the deletion of vectors to ensure safe concurrent access, preventing use-after-free errors.
 
     The LFSV allows multiple threads to safely update and access a dynamic array without traditional locking mechanisms, leveraging atomic operations for consistency and minimizing performance bottlenecks associated with memory management in concurrent applications.
-*/
+ */
 
-#include <iostream>       // standard I/O operations
-#include <atomic>         // atomic operations for thread safety
-#include <thread>         // thread handling
-#include <vector>         // dynamic array
+#include <iostream>    
+#include <atomic>
+#include <thread> 
+#include <vector>
 #include <mutex>          // mutex for synchronization
 #include <deque>          // double-ended queue
 #include <chrono>         // time utilities
+#include "LockFreeMemoryBank.h"
 
 class GarbageRemover {
-    std::deque<std::pair<std::vector<int>*, std::chrono::time_point<std::chrono::system_clock>>> to_be_deleted; // pairs of vectors and their deletion timestamps
-    std::mutex m; // protects access to to_be_deleted
-    std::atomic<bool> stop{ false }; // signals the background thread to stop
-    std::thread worker; // background thread for deleting vectors
+    std::deque<std::pair<std::vector<int>*, std::chrono::time_point<std::chrono::system_clock>>> mToBeDeleted; // pairs of vectors and their deletion timestamps
+    std::mutex mMutex; // protects access to to_be_deleted
+    std::atomic<bool> mStop{ false }; // signals the background thread to stop
+    std::thread mWorker; // background thread for deleting vectors
 
-    void WatchingThread() { // background thread function that deletes vectors after a delay
-        while (!stop) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(20));
-            auto now = std::chrono::system_clock::now();
-            std::lock_guard<std::mutex> lock(m); // delete vectors that are old enough
-            while (!to_be_deleted.empty() && now - to_be_deleted.front().second > std::chrono::milliseconds(40)) {
-                delete to_be_deleted.front().first; // delete the vector
-                to_be_deleted.pop_front(); // remove it from the queue
-            }
-        }
-        for (auto& pt : to_be_deleted) delete pt.first; // clean up any remaining vectors
-    }
+    void WatchingThread();
 
 public:
-    GarbageRemover() { worker = std::thread(&GarbageRemover::WatchingThread, this); } // start the background thread
+    GarbageRemover() { mWorker = std::thread(&GarbageRemover::WatchingThread, this); } // start the background thread
 
-    ~GarbageRemover() {
-        stop = true;
-        if (worker.joinable()) worker.join(); // wait for the thread to finish
-    }
+    ~GarbageRemover();
 
     void Add(std::vector<int>* p) { // adds a vector to be deleted later
-        std::lock_guard<std::mutex> lock(m);
-        to_be_deleted.push_back(std::make_pair(p, std::chrono::system_clock::now()));
-    }
-    void Stop() { // stops the background thread
-        stop = true;
-        worker.join(); // ensure the thread finishes cleanly
-    }
-};
-
-class MemoryBank {
-    std::deque<std::vector<int>*> mSlots; // pool of vectors
-    std::mutex mMutex; // protects access to mSlots
-
-public:
-    MemoryBank(int size) { // pre-allocates a specified number of vectors
-        for (int i = 0; i < size; ++i) mSlots.push_back(new std::vector<int>());
-    }
-
-    ~MemoryBank() { // deletes all vectors in the pool
         std::lock_guard<std::mutex> lock(mMutex);
-        for (auto& el : mSlots) delete el;
+        mToBeDeleted.push_back(std::make_pair(p, std::chrono::system_clock::now()));
     }
-
-    std::vector<int>* Get() { // retrieves a vector from the pool or creates a new one if the pool is exhausted
-        std::lock_guard<std::mutex> lock(mMutex);
-        if (!mSlots.empty()) {
-            auto* vec = mSlots.front();
-            mSlots.pop_front();
-            return vec;
-        }
-        return new std::vector<int>();
-    }
-
-    void Store(std::vector<int>* vec) { // returns a vector to the pool for future reuse
-        std::lock_guard<std::mutex> lock(mMutex);
-        mSlots.push_back(vec);
-    }
+    void Stop();
 };
 
 class LFSV {
     std::atomic<std::vector<int>*> pdata; // current vector, atomically updated
     GarbageRemover gr; // handles safe deletion of old vectors
-    MemoryBank mb{ 5000 }; // pool of pre-allocated vectors
+    LockFreeMemoryBank mb; // pool of pre-allocated vectors
 
 public:
-    LFSV() : pdata(new std::vector<int>()) {} // initializes pdata with a new vector
+    LFSV() : pdata(new std::vector<int>()), mb{} {} // initializes pdata with a new vector
 
     ~LFSV() { // ensures the last data vector is also safely deleted
         auto* lastData = pdata.load();
@@ -102,8 +56,12 @@ public:
             pdata_new = mb.Get(); // get a pre-allocated vector from the MemoryBank
             *pdata_new = *pdata_old; // copy current data
             pdata_new->push_back(v); // insert the new value
-            if (pdata.compare_exchange_weak(pdata_old, pdata_new)) gr.Add(pdata_old); // old data goes to GarbageRemover
-            else mb.Store(pdata_new); // if CAS fails, return the vector to the MemoryBank
+            if (pdata.compare_exchange_weak(pdata_old, pdata_new)) {
+                gr.Add(pdata_old); // old data goes to GarbageRemover
+            }
+            else {
+                mb.Store(pdata_new); // if CAS fails, return the vector to the MemoryBank
+            }
         } while (pdata_new != pdata.load()); // loop until successful
     }
 
