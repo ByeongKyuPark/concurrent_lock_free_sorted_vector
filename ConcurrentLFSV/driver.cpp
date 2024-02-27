@@ -1,3 +1,16 @@
+/*
+    Test the concurrencyand integrity of a Lock - Free Sorted Vector(LFSV) in a multi - threaded environment.
+
+    1. Concurrency of Writes 
+        : Multiple threads insert non - sequential integers concurrently to evaluate the vector's ability to handle concurrent modifications.
+    2. Read During Writes 
+        : A dedicated thread continuously reads from a specific position within the vector to ensure that reads during concurrent writes are consistent and accurate, highlighting the structure's capacity for concurrent read and write operations without data corruption.
+    3. Performance and Scalability 
+        : The performance impact of varying the number of threads and operations per thread is measured, showcasing how well the data structure scales with increased concurrency.
+    4. Randomized Insertion 
+        : Data is inserted in a randomized order to simulate a real - world scenario, testing the vector's ability to maintain order and integrity under non-sequential writes.
+*/
+
 #include <iostream>
 #include <vector>
 #include <thread>
