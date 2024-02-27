@@ -31,3 +31,4 @@ This will sequentially execute tests for scenarios 0 through 7, demonstrating th
 ## Conclusion
 
 The choice of Garbage Remover over a traditional Memory Bank represents a significant optimization in our LFSV implementation, offering enhanced performance and safety in concurrent applications. This project is a testament to the potential for lock-free data structures to improve scalability and efficiency in modern software development.
+
