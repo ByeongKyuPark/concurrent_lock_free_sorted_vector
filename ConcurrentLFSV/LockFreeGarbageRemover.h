@@ -19,22 +19,23 @@ class GarbageRemover {
     std::thread mWorker;
 
     void WatchingThread() {
+        const std::chrono::milliseconds SLEEP_TIME{ 50 };
         while (!mStop) {
             auto now = std::chrono::system_clock::now();
             std::shared_ptr<std::pair<std::vector<int>*, std::chrono::time_point<std::chrono::system_clock>>> item;
             while ((item = mToBeDeleted.TryPop())) {
                 if (item->second <= now) {
                     delete item->first; // safe delete
+                    std::this_thread::sleep_for(SLEEP_TIME); // sleep to not use CPU
                 }
                 else {
                     // if the item is not ready to be deleted, push it back for later processing
                     // (this may need a strategy to prevent immediate reprocessing, such as a temporary delay or a separate storage for future re-check)
                     mToBeDeleted.Push(std::make_pair(item->first, item->second));
-                    std::this_thread::sleep_for(std::chrono::milliseconds(50)); // sleep to prevent tight loop on immediate re-check
+                    std::this_thread::sleep_for(SLEEP_TIME); // sleep to prevent tight loop on immediate re-check
                     break; // break to check the mStop flag
                 }
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(100)); // sleep to not use CPU
         }
     }
 
