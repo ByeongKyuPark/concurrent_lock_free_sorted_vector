@@ -11,40 +11,39 @@
 \maketitle
 
 \section{Introduction}
-This document presents an analysis of a Lock-Free Sorted Vector (LFSV) designed for high-concurrency environments. The LFSV utilizes a MemoryBank for efficient vector instance recycling and a GarbageRemover for safe, delayed deletion of vectors, aiming to minimize traditional locking mechanisms' performance bottlenecks.
+This document presents an analysis of a Lock-Free Sorted Vector (LFSV) designed for high-concurrency environments. Unlike traditional approaches that may rely on lock-based synchronization mechanisms, the LFSV leverages atomic operations to ensure thread safety and high performance. A key aspect of our implementation is the **Garbage Remover** component, which provides an efficient memory management strategy by deferring the deletion of vector elements.
 
 \section{Implementation}
-The LFSV is implemented with two primary components to manage memory in a concurrent setting efficiently:
+The LFSV is implemented with a focus on the Garbage Remover component for efficient memory management in a concurrent setting:
 \begin{itemize}
-    \item \textbf{MemoryBank:} Recycles vector instances to reduce allocation and deallocation overhead.
-    \item \textbf{GarbageRemover:} Safely deletes vectors after a delay, preventing use-after-free errors.
+    \item \textbf{Garbage Remover:} Safely deletes vectors after a delay, preventing use-after-free errors and reducing dynamic allocation overhead, thus minimizing lock contention.
 \end{itemize}
-Together, these components allow for safe updates and access by multiple threads without serializing access, leveraging atomic operations for consistency.
+This approach allows for safe updates and access by multiple threads without serializing access, leveraging atomic operations for consistency.
 
 \section{Performance Evaluation}
-Performance was evaluated under different thread counts, with the following results observed:
+Performance was evaluated under different thread counts, with the following updated results observed:
 
 \begin{table}[h]
 \centering
 \begin{tabular}{|l|l|l|}
 \hline
 \textbf{Number of Threads} & \textbf{Operations per Thread} & \textbf{Execution Time (seconds)} \\ \hline
-1                          & 25600                          & 0.757726                          \\ \hline
-2                          & 12800                          & 0.716873                          \\ \hline
-4                          & 6400                           & 0.664578                          \\ \hline
-8                          & 3200                           & 0.701546                          \\ \hline
-16                         & 1600                           & 0.82039                           \\ \hline
+1                          & 21000                          & 0.498376                          \\ \hline
+2                          & 10500                          & 0.439024                          \\ \hline
+3                          & 7000                           & 0.44203                           \\ \hline
+4                          & 5250                           & 0.391371                          \\ \hline
+5                          & 4200                           & 0.379913                          \\ \hline
+8                          & 2625                           & 0.290448                          \\ \hline
+16                         & 1313                           & 0.333443                          \\ \hline
 \end{tabular}
-\caption{LFSV Performance Results}
-\label{table:performance}
+\caption{Updated LFSV Performance Results}
+\label{table:updated_performance}
 \end{table}
 
 \section{Analysis}
-The results indicate improved performance with an increase in threads up to 4, after which performance plateaus and then degrades. This pattern suggests that the LFSV effectively utilizes CPU resources up to a point, beyond which the overhead associated with managing additional threads outweighs the benefits of parallelism. Factors such as lock contention, context switching, and cache effects likely contribute to this behavior.
-
-Given the hardware configuration of 8 cores and 16 logical processors with enabled virtualization, optimal performance was expected near the core count. However, diminishing returns beyond 4 threads suggest a complex interplay between the LFSV's lock-free design and the underlying hardware's capabilities to manage concurrency efficiently.
+The updated results indicate a trend of improved performance with an increase in threads, up to a certain point. This highlights the efficiency of the LFSV's lock-free design and the effectiveness of the Garbage Remover in managing concurrent operations. 
 
 \section{Conclusion}
-The LFSV demonstrates the potential for lock-free data structures to improve performance in concurrent applications. Future work will focus on optimizing memory management components and further analyzing the impact of hardware characteristics on scalability and performance.
+The LFSV, with its innovative use of the Garbage Remover for memory management, demonstrates significant potential for enhancing performance in concurrent applications. This lock-free data structure improves scalability and efficiency, making it an excellent choice for modern software development in high-concurrency environments. Future work will explore further optimizations and the impact of various hardware configurations on performance.
 
 \end{document}

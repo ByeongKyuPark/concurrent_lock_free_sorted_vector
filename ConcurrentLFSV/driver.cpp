@@ -83,7 +83,7 @@ void PushPop(ThreadSafeQueue<int>& q)
     for (int i = 0; i < 100; ++i) {
         q.Push(++c);
         ++size;
-        int val = 0;
+        //int val = 0;
         std::shared_ptr<int> top = q.TryPop();
         if (top) {
             --size;
@@ -95,7 +95,7 @@ void PushPop(ThreadSafeQueue<int>& q)
 void PopPush(ThreadSafeQueue<int>& q)
 {
     for (int i = 0; i < 10000; ++i) {
-        int val = 0;
+        //int val = 0;
         std::shared_ptr<int> top = q.TryPop();
         if (top) {
             q.Push(++ * top);

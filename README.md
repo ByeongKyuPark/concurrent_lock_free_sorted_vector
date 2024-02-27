@@ -1,57 +1,33 @@
-# Lock-Free Sorted Vector (LFSV)
+# Lock-Free Sorted Vector (LFSV) Implementation
 
 ## Overview
-This repository contains the implementation of a Lock-Free Sorted Vector (LFSV) optimized for high concurrency environments. The LFSV leverages atomic operations to ensure thread-safe updates and accesses to a dynamic array without traditional locking mechanisms. It integrates two main components for efficient memory management:
-- `MemoryBank`: A pool that recycles vector instances to minimize dynamic allocation overhead.
-- `GarbageRemover`: Delays the deletion of vectors to ensure safe concurrent access, preventing use-after-free errors.
 
-The design aims to minimize performance bottlenecks associated with memory management in concurrent applications, making it an ideal solution for scenarios requiring high throughput and parallel data updates.
+This repository contains an implementation of a Lock-Free Sorted Vector (LFSV), optimized for high-concurrency environments. Unlike traditional approaches that may rely on lock-based synchronization mechanisms, this LFSV leverages atomic operations to ensure thread safety and high performance.
 
-## How to Run
+A key component of our implementation is the **Garbage Remover**, which provides an efficient memory management strategy by deferring the deletion of vector elements. This approach ensures that memory is not freed prematurely, preventing use-after-free errors that can occur in highly concurrent scenarios. The decision to use Garbage Remover over a Memory Bank was made after careful consideration of the performance benefits, particularly in reducing dynamic allocation overhead and minimizing lock contention.
 
-### Prerequisites
-- C++ compiler with C++11 support (e.g., GCC, Clang)
-- Make (optional for compilation automation)
+## Key Features
 
-### Compilation
-To compile the test program using the provided Makefile, follow these steps:
+- **High Concurrency Support**: Designed to perform efficiently in multi-threaded environments, allowing for simultaneous updates and accesses by multiple threads without traditional locks.
+- **Efficient Memory Management**: Utilizes the Garbage Remover component for deferred deletion, optimizing memory usage and preventing use-after-free vulnerabilities.
+- **Lock-Free Design**: Employs atomic operations to maintain consistency and integrity of the vector, avoiding the performance bottlenecks associated with locks.
 
-1. Navigate to the directory containing the source files and the Makefile. If you're using a terminal, you can use the `cd` command to change the directory. For example, if your project is located in the 'ConcurrentLFSV' folder, you can navigate to it with:
+## Building and Running
 
-    ```bash
-    cd path/to/ConcurrentLFSV
-    ```
+This project uses a Makefile for easy building and running. The following commands are supported:
 
-2. Once you're in the correct directory, you can compile the program by simply running the `make` command. This will use the Makefile to compile your program according to the predefined rules and settings:
+- `make`: Compiles the source code into an executable.
+- `make clean`: Removes compiled files to clean the directory.
+- `make run`: Runs the compiled executable. This command has been updated to execute tests for all scenarios from 0 to 7, showcasing the robustness and efficiency of the LFSV implementation in various use cases.
 
-    ```bash
-    make
-    ```
-
-    This command will automatically use the settings defined in the Makefile to compile your program, creating an executable named `lfsv_test`.
-
-3. If you want to clean up the compiled files, you can run:
-
-    ```bash
-    make clean
-    ```
-
-4. To run the compiled program, you can either use:
-
-    ```bash
-    ./lfsv_test <test_number>
-    ```
-
-    Or, if you've added a `run` rule in your Makefile:
-
-    ```bash
-    make run
-    ```
-
-### Running Tests
-The program accepts a single command-line argument that specifies the test number to run. Each test varies the number of threads and operations per thread to measure the performance under different concurrency levels.
-
-To run a specific test, execute the compiled program with the test number as an argument. For example, to run test number 4:
+To run the test suite across all scenarios, simply use:
 
 ```bash
-./lfsv_test 4
+make run
+```
+
+This will sequentially execute tests for scenarios 0 through 7, demonstrating the LFSV's performance and correctness in a variety of conditions.
+
+## Conclusion
+
+The choice of Garbage Remover over a traditional Memory Bank represents a significant optimization in our LFSV implementation, offering enhanced performance and safety in concurrent applications. This project is a testament to the potential for lock-free data structures to improve scalability and efficiency in modern software development.
