@@ -26,13 +26,16 @@
 std::atomic<bool> doread(true);
 LFSV lfsv;
 
+std::atomic<int> c(0);
+std::atomic<int> size(0);
+
 void InsertRange(int b, int e) {
     std::vector<int> range(e - b);
     for (int i = b; i < e; ++i) {
         range[i - b] = i;
     }
     auto rng = std::default_random_engine(std::random_device{}());
-    std::shuffle(std::begin(range), std::end(range), rng);
+    std::shuffle(std::begin(range), std::end(range), rng);//randomizes the order in which elements are inserted
     for (int i = 0; i < e - b; ++i) {
         lfsv.Insert(range[i]);
     }
@@ -72,6 +75,62 @@ void Test(int numThreads, int numPerThread) {
     std::cout << "Test completed in " << elapsed.count() << " seconds." << std::endl;
 }
 
+void push_pop(ThreadSafeQueue<int>& q)
+{
+    for (int i = 0; i < 100; ++i) {
+        q.Push(++c);
+        ++size;
+        int val = 0;
+        std::shared_ptr<int> top = q.TryPop();
+        if (top) {
+            --size;
+        }
+        //        std::cout << *top << std::endl;
+    }
+}
+
+void pop_push(ThreadSafeQueue<int>& q)
+{
+    for (int i = 0; i < 10000; ++i) {
+        int val = 0;
+        std::shared_ptr<int> top = q.TryPop();
+        if (top) {
+            q.Push(++ * top);
+        }
+    }
+}
+
+void ThreadSafeQueueTest() {
+
+    ThreadSafeQueue<int> tsq;
+    //push_pop( tsq );
+    constexpr int NumThreads = 4;
+    std::vector<std::thread> threads;
+    for (unsigned i = 0; i < NumThreads; ++i) {
+        threads.push_back(std::thread(pop_push, std::ref(tsq)));
+    }
+    for (unsigned i = 0; i < NumThreads; ++i) {
+        threads.push_back(std::thread(push_pop, std::ref(tsq)));
+    }
+    for (auto& t : threads) {
+        t.join();
+    }
+
+    //std::cout << "Stack content: ";
+    int final_size = 0;
+    while (!tsq.empty()) {
+        std::shared_ptr<int> top = tsq.TryPop();
+        ++final_size;
+        //std::cout << *top << std::endl;
+    }
+    if (final_size != size) {
+        std::cout << "Passed the ThreadSafeQueue Test::Wrong size " << final_size << std::endl;
+    }
+    else {
+        std::cout << "Passed the ThreadSafeQueue Test\n";
+    }
+}
+
 void Test0() { Test(1, 25600); }   
 void Test1() { Test(2, 12800); }
 void Test2() { Test(4, 6400); }
@@ -81,6 +140,9 @@ void Test4() { Test(16, 1600); }
 void (*pTests[])() = { Test0, Test1, Test2, Test3, Test4};
 
 int main(int argc, char** argv) {
+    
+    ThreadSafeQueueTest();
+
     if (argc == 2) {
         int test = std::atoi(argv[1]);
         if (test >= 0 && static_cast<int>(test) < static_cast<int>(sizeof(pTests) / sizeof(pTests[0]))) {

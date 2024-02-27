@@ -1,3 +1,4 @@
+#pragma once
 /**
  * LockFreeMemoryBank.h !
  * by ByeongKyu Park
@@ -20,11 +21,9 @@
  *   contention and supporting more efficient concurrent operations.
  *
  * Usage:
- *   - Call `Get()` to retrieve a vector from the pool. If the pool is empty,
- *     a new vector is allocated.
- *   - Use `Store(std::vector<int>* vec)` to return a vector to the pool after use.
- *   - Ensure proper initialization and destruction within the context of the
- *     LFSV class to manage memory effectively.
+ *   - Call 'Get()' to retrieve a vector from the pool. If the pool is empty, a new vector is allocated.
+ *   - Use 'Store(std::vector<int>* vec)' to return a vector to the pool after use.
+ *   - Ensure proper initialization and destruction within the context of the LFSV class to manage memory effectively.
  *
  * Note:
  *   This implementation focuses on concurrency and performance improvements.

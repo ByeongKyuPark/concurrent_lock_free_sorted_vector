@@ -1,28 +1,23 @@
 #include "lfsv.h"
 
-LFSV::~LFSV() { // ensures the last data vector is also safely deleted
-    auto* lastData = pdata.load();
-    if (lastData) gr.Add(lastData);
-    gr.Stop(); // make sure to stop the GarbageRemover
+LFSV::~LFSV() {
+    std::vector<int>* toDelete = pdata.load();
+    globalGarbageRemover.ScheduleForDeletion(toDelete, std::chrono::system_clock::now()); // immediately schedule for deletion
 }
 
-void LFSV::Insert(int const& v) { // inserts a value into the vector in a thread-safe manner
-    std::vector<int>* pdata_old = nullptr, * pdata_new = nullptr;
-    do {
-        pdata_old = pdata.load(); // load the current vector
-        pdata_new = mb.Get(); // get a pre-allocated vector from the MemoryBank
-        *pdata_new = *pdata_old; // copy current data
-        pdata_new->push_back(v); // insert the new value
-        if (pdata.compare_exchange_weak(pdata_old, pdata_new)) {
-            gr.Add(pdata_old); // old data goes to GarbageRemover
-        }
-        else {
-            mb.Store(pdata_new); // if CAS fails, return the vector to the MemoryBank
-        }
-    } while (pdata_new != pdata.load()); // loop until successful
-}
+void LFSV::Insert(int const& v) {
+    std::vector<int>* oldData = pdata.load();
+    std::vector<int>* newData = new std::vector<int>(*oldData);
+    // find the correct position to insert the new value to keep the vector sorted
+    auto it = std::lower_bound(newData->begin(), newData->end(), v);
+    newData->insert(it, v); // insert value in the correct position
 
-int LFSV::operator[](int pos) { // accesses an element of the vector, potentially unsafe in concurrent scenarios
-    std::vector<int>* snapshot = pdata.load(); // get the current vector
-    return (*snapshot)[pos]; // return the requested element
+    if (pdata.compare_exchange_strong(oldData, newData)) {
+        // schedule the old data for deletion
+        globalGarbageRemover.ScheduleForDeletion(oldData, std::chrono::system_clock::now() + std::chrono::seconds(20)); // adjust timing as needed
+    }
+    else {
+        // if the exchange was not successful, delete the newly allocated data
+        delete newData;
+    }
 }
