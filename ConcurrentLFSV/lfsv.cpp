@@ -2,7 +2,7 @@
 
 LFSV::~LFSV() {
     std::vector<int>* toDelete = pdata.load();
-    globalGarbageRemover.ScheduleForDeletion(toDelete, std::chrono::system_clock::now()); // immediately schedule for deletion
+    gGarbageRemover.ScheduleForDeletion(toDelete); 
 }
 
 void LFSV::Insert(int const& v) {
@@ -14,7 +14,7 @@ void LFSV::Insert(int const& v) {
 
     if (pdata.compare_exchange_strong(oldData, newData)) {
         // schedule the old data for deletion
-        globalGarbageRemover.ScheduleForDeletion(oldData, std::chrono::system_clock::now() + std::chrono::seconds(20)); // adjust timing as needed
+        gGarbageRemover.ScheduleForDeletion(oldData);
     }
     else {
         // if the exchange was not successful, delete the newly allocated data

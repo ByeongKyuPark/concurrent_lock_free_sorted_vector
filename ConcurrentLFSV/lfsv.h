@@ -1,22 +1,26 @@
 #pragma once
 /*
-    This implementation provides a lock-free sorted vector (LFSV) optimized for high-concurrency environments. It uses two main components for efficient memory management:
-    1. MemoryBank: A pool for recycling vector instances to minimize dynamic allocation overhead.
-    2. GarbageRemover: Delays the deletion of vectors to ensure safe concurrent access, preventing use-after-free errors.
+    This implementation provides a lock-free sorted vector (LFSV) optimized for high-concurrency environments. 
+    While initially considering the use of a Memory Bank for recycling vector instances to minimize dynamic allocation overhead, 
+    this version instead leverages the GarbageRemover component for efficient memory management.
 
-    The LFSV allows multiple threads to safely update and access a dynamic array without traditional locking mechanisms, leveraging atomic operations for consistency and minimizing performance bottlenecks associated with memory management in concurrent applications.
- */
-#include "LockFreeGarbageRemover.h" 
+    The GarbageRemover component delays the deletion of vectors to ensure safe concurrent access and prevent use-after-free errors, 
+    which has been found to be more efficient for this specific application context over the traditional Memory Bank approach.
+
+    The LFSV allows multiple threads to safely update and access a dynamic array without traditional locking mechanisms, 
+    leveraging atomic operations for consistency. 
+    This design minimizes the performance bottlenecks typically associated with memory management in concurrent applications, 
+    making it particularly suitable for high-performance, multi-threaded environments.
+*/
 #include <vector>
 #include <atomic>
 #include <chrono>
 #include <vector>
 #include <atomic>
 #include <memory> // std::shared_ptr
-#include "ThreadSafeQueue.h"
-#include "LockFreeGarbageRemover.h"
+#include "GarbageRemover.h" 
 
-extern GarbageRemover globalGarbageRemover; 
+extern GarbageRemover gGarbageRemover; 
 
 class LFSV {
 private:

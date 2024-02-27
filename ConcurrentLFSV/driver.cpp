@@ -1,14 +1,17 @@
 /*
-    Test the concurrencyand integrity of a Lock - Free Sorted Vector(LFSV) in a multi - threaded environment.
+    Test the concurrency and integrity of a Lock-Free Sorted Vector (LFSV) in a multi-threaded environment.
 
-    1. Concurrency of Writes 
-        : Multiple threads insert non - sequential integers concurrently to evaluate the vector's ability to handle concurrent modifications.
-    2. Read During Writes 
-        : A dedicated thread continuously reads from a specific position within the vector to ensure that reads during concurrent writes are consistent and accurate, highlighting the structure's capacity for concurrent read and write operations without data corruption.
-    3. Performance and Scalability 
-        : The performance impact of varying the number of threads and operations per thread is measured, showcasing how well the data structure scales with increased concurrency.
-    4. Randomized Insertion 
-        : Data is inserted in a randomized order to simulate a real - world scenario, testing the vector's ability to maintain order and integrity under non-sequential writes.
+    This program is designed to evaluate the performance, scalability, and data integrity of LFSV under various conditions:
+        1. Concurrency of Writes: Multiple threads insert non-sequential integers concurrently to assess the vector's ability to handle concurrent modifications without data loss or corruption.
+        2. Read During Writes: A dedicated thread continuously reads from a specific position within the vector to ensure reads are consistent and accurate during concurrent writes, demonstrating the vector's capability to support concurrent read and write operations.
+        3. Performance and Scalability: The impact of varying the number of threads on performance is measured, illustrating how the data structure scales with increased concurrency. A total of 21000 operations are divided by the number of threads to maintain a constant workload across tests.
+        4. Randomized Insertion: Elements are inserted in a randomized order to mimic real-world usage and challenge the vector's ability to maintain order and integrity under non-sequential insertion patterns.
+
+    Test Cases:
+        Test0 is designated for ThreadSafeQueueTest, utilizing the GarbageRemoved functionality. 
+        Test1 through Test5 correspond to threads 1 to 5, respectively, where the user can specify the test number through argv[1]. 
+        There are no separate tests for thread counts 6 and 7; instead, argv[1]=6 triggers a test with 8 threads, 
+        and argv[1]=7 triggers a test with 16 threads.
 */
 
 #include <iostream>
@@ -18,8 +21,8 @@
 #include <chrono>
 #include <random>
 #include <algorithm> // std::shuffle
-#include <cstdlib> // std::atoi
-#include <ctime> // std::time
+#include <cstdlib>   // std::atoi
+#include <ctime>     // std::time
 
 #include "lfsv.h"
 
@@ -75,7 +78,7 @@ void Test(int numThreads, int numPerThread) {
     std::cout << "Test completed in " << elapsed.count() << " seconds." << std::endl;
 }
 
-void push_pop(ThreadSafeQueue<int>& q)
+void PushPop(ThreadSafeQueue<int>& q)
 {
     for (int i = 0; i < 100; ++i) {
         q.Push(++c);
@@ -89,7 +92,7 @@ void push_pop(ThreadSafeQueue<int>& q)
     }
 }
 
-void pop_push(ThreadSafeQueue<int>& q)
+void PopPush(ThreadSafeQueue<int>& q)
 {
     for (int i = 0; i < 10000; ++i) {
         int val = 0;
@@ -107,10 +110,10 @@ void ThreadSafeQueueTest() {
     constexpr int NumThreads = 4;
     std::vector<std::thread> threads;
     for (unsigned i = 0; i < NumThreads; ++i) {
-        threads.push_back(std::thread(pop_push, std::ref(tsq)));
+        threads.push_back(std::thread(PopPush, std::ref(tsq)));
     }
     for (unsigned i = 0; i < NumThreads; ++i) {
-        threads.push_back(std::thread(push_pop, std::ref(tsq)));
+        threads.push_back(std::thread(PushPop, std::ref(tsq)));
     }
     for (auto& t : threads) {
         t.join();
@@ -118,7 +121,7 @@ void ThreadSafeQueueTest() {
 
     //std::cout << "Stack content: ";
     int final_size = 0;
-    while (!tsq.empty()) {
+    while (!tsq.IsEmpty()) {
         std::shared_ptr<int> top = tsq.TryPop();
         ++final_size;
         //std::cout << *top << std::endl;
@@ -130,19 +133,18 @@ void ThreadSafeQueueTest() {
         std::cout << "Passed the ThreadSafeQueue Test\n";
     }
 }
-
-void Test0() { Test(1, 25600); }   
-void Test1() { Test(2, 12800); }
-void Test2() { Test(4, 6400); }
-void Test3() { Test(8, 3200); }
-void Test4() { Test(16, 1600); }
-
-void (*pTests[])() = { Test0, Test1, Test2, Test3, Test4};
+void Test0() { ThreadSafeQueueTest(); }
+void Test1() { Test(1, 21000); }   
+void Test2() { Test(2, 10500); }
+void Test3() { Test(3, 7000); }
+void Test4() { Test(4, 5250); }
+void Test5() { Test(5, 4200); }
+void Test8() { Test(8, 2625); }
+void Test16() { Test(16, 1313); }
+void (*pTests[])() = { Test0, Test1, Test2, Test3, Test4,Test5,Test8, Test16};
 
 int main(int argc, char** argv) {
     
-    ThreadSafeQueueTest();
-
     if (argc == 2) {
         int test = std::atoi(argv[1]);
         if (test >= 0 && static_cast<int>(test) < static_cast<int>(sizeof(pTests) / sizeof(pTests[0]))) {

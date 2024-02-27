@@ -6,36 +6,44 @@
     This mechanism is essential for the LFSV, allowing it to update and access data across multiple threads without traditional locking, minimizing performance bottlenecks.
     By deferring deletion, 'GarbageRemover' enables the LFSV to maintain high performance and consistency in concurrent applications, making it an integral component of the system's memory management strategy.
 */
-
-#include "ThreadsafeQueue.h" // Include the threadsafe_queue implementation
+#include "ThreadsafeQueue.h"
 #include <chrono>
 #include <thread>
 #include <vector>
 #include <atomic>
+#include <condition_variable>
+#include <mutex>
 
 class GarbageRemover {
     ThreadSafeQueue<std::pair<std::vector<int>*, std::chrono::time_point<std::chrono::system_clock>>> mToBeDeleted;
     std::atomic<bool> mStop{ false };
     std::thread mWorker;
+    std::condition_variable mCondVar;
+    std::mutex mMutex;
 
     void WatchingThread() {
-        const std::chrono::milliseconds SLEEP_TIME{ 50 };
+        const std::chrono::milliseconds WAIT_TIME{ 20 };
+        std::unique_lock<std::mutex> lock(mMutex, std::defer_lock);
         while (!mStop) {
+            lock.lock();
+            mCondVar.wait(lock, [this] {
+                return mStop || !mToBeDeleted.IsEmpty();
+                });
+
             auto now = std::chrono::system_clock::now();
-            std::shared_ptr<std::pair<std::vector<int>*, std::chrono::time_point<std::chrono::system_clock>>> item;
-            while ((item = mToBeDeleted.TryPop())) {
-                if (item->second <= now) {
+            while (!mToBeDeleted.IsEmpty() && !mStop) {
+                auto item = mToBeDeleted.TryPop();
+                if (item && item->second+WAIT_TIME <= now) {
                     delete item->first; // safe delete
-                    std::this_thread::sleep_for(SLEEP_TIME); // sleep to not use CPU
                 }
-                else {
-                    // if the item is not ready to be deleted, push it back for later processing
-                    // (this may need a strategy to prevent immediate reprocessing, such as a temporary delay or a separate storage for future re-check)
+                else if (item) {
+                    // schedule the thread to wake up when the next item is due for deletion
+                    mCondVar.wait_until(lock, item->second);
+                    // after waking up, push the item back for re-checking
                     mToBeDeleted.Push(std::make_pair(item->first, item->second));
-                    std::this_thread::sleep_for(SLEEP_TIME); // sleep to prevent tight loop on immediate re-check
-                    break; // break to check the mStop flag
                 }
             }
+            lock.unlock();
         }
     }
 
@@ -46,12 +54,14 @@ public:
 
     ~GarbageRemover() {
         mStop = true;
+        mCondVar.notify_one(); // ensure the watching thread wakes up to terminate
         if (mWorker.joinable()) {
             mWorker.join();
         }
     }
 
-    void ScheduleForDeletion(std::vector<int>* ptr, std::chrono::time_point<std::chrono::system_clock> deleteAfter) {
-        mToBeDeleted.Push(std::make_pair(ptr, deleteAfter));
+    void ScheduleForDeletion(std::vector<int>* ptr) {
+        mToBeDeleted.Push(std::make_pair(ptr, std::chrono::system_clock::now()));
+        mCondVar.notify_one(); // notify in case the watching thread is waiting and this is the next item due
     }
 };

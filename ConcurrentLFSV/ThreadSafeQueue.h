@@ -67,7 +67,7 @@ class ThreadSafeQueue
     {
         std::unique_lock<std::mutex> headLock(WaitForData());
         std::unique_ptr<Node> old_head = std::move(m_pHead);
-        m_pHead = std::move(old_head->next);
+        m_pHead = std::move(old_head->m_pNext);
         return old_head;
     }
 
@@ -103,7 +103,7 @@ public:
         mDataCond.notify_one();
     }
 
-    bool empty() const
+    bool IsEmpty() const
     {
         std::lock_guard<std::mutex> headLock(mHeadMutex);
         return (m_pHead.get() == GetTail());

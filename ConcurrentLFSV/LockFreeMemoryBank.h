@@ -1,7 +1,6 @@
 #pragma once
 /**
- * LockFreeMemoryBank.h !
- * by ByeongKyu Park
+ * LockFreeMemoryBank.h  (slower than GrabageRemover !)
  *
  * Overview:
  *   Implements a lock-free memory bank for managing a pool of pre-allocated
